@@ -21,9 +21,10 @@ const Orders = ({ user }) => {
             <h1 className=" text-center text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
               Ordenes de {user.name}
             </h1>
-            <pre className="text-sm text-gray-900 dark:text-gray-50 ">
-              {JSON.stringify(orders, null, 2)}
-            </pre>
+            {orders.map((o) =>
+              o.id === selected.id ? <h3>{o.name}</h3> : <h3>{o.name}</h3>
+            )}
+
             <button
               onClick={handleNew}
               className="dark:border-solid border rounded px-4 py-1 dark:border-gray-50  text-sm text-gray-900 dark:text-gray-50"
