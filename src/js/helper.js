@@ -63,3 +63,36 @@ export const downloadCSV = (data) => {
   link.click();
   document.body.removeChild(link);
 };
+
+export const hexToRgba = (hex) => {
+  // Remove the leading # if present
+  hex = hex.replace(/^#/, "");
+
+  // Parse the hexadecimal string to get the red, green, blue, and optional alpha components
+  let r,
+    g,
+    b,
+    a = 255;
+
+  if (hex.length === 3) {
+    // Handle short hex format (e.g., #RGB)
+    r = parseInt(hex[0] + hex[0], 16);
+    g = parseInt(hex[1] + hex[1], 16);
+    b = parseInt(hex[2] + hex[2], 16);
+  } else if (hex.length === 6) {
+    // Handle full hex format (e.g., #RRGGBB)
+    r = parseInt(hex.substring(0, 2), 16);
+    g = parseInt(hex.substring(2, 4), 16);
+    b = parseInt(hex.substring(4, 6), 16);
+  } else if (hex.length === 8) {
+    // Handle full hex with alpha (e.g., #RRGGBBAA)
+    r = parseInt(hex.substring(0, 2), 16);
+    g = parseInt(hex.substring(2, 4), 16);
+    b = parseInt(hex.substring(4, 6), 16);
+    a = parseInt(hex.substring(6, 8), 16) / 255;
+  } else {
+    throw new Error("Invalid hex color format");
+  }
+
+  return [r, g, b, a];
+};

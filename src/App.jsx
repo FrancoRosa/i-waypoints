@@ -3,7 +3,7 @@ import DeckGL from "@deck.gl/react";
 import { LineLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import { Map, NavigationControl } from "react-map-gl";
 import proj4 from "proj4";
-import { distance, divideSegment, downloadCSV } from "./js/helper";
+import { distance, divideSegment, downloadCSV, hexToRgba } from "./js/helper";
 import { useEffect, useState } from "react";
 
 const initialView = {
@@ -20,6 +20,7 @@ const App = () => {
   const [total, setTotal] = useState();
   const [style, setStyle] = useLocalStorage("style", 0);
   const [len, setLen] = useLocalStorage("len", 10);
+  const [color, setColor] = useLocalStorage("color", "#df870c");
 
   const [proj, setProj] = useLocalStorage(
     "proj",
@@ -78,10 +79,6 @@ const App = () => {
     setLen(dist);
   };
 
-  useEffect(() => {
-    setTotal(lines.reduce((s, l) => s + l.dist, 0).toFixed(2));
-  }, [lines]);
-
   const handleStyle = () => {
     setStyle((s) => (s + 1 < styles.length ? s + 1 : 0));
   };
@@ -89,6 +86,14 @@ const App = () => {
   const handleDownload = () => {
     downloadCSV(gPoints);
   };
+
+  const handleColor = (e) => {
+    setColor(e.target.value);
+  };
+
+  useEffect(() => {
+    setTotal(lines.reduce((s, l) => s + l.dist, 0).toFixed(2));
+  }, [lines]);
 
   return (
     <>
@@ -102,7 +107,7 @@ const App = () => {
           data={lines}
           getSourcePosition={(d) => d.from}
           getTargetPosition={(d) => d.to}
-          getColor={[255, 140, 0]}
+          getColor={hexToRgba(color)}
           getWidth={5}
 
           // widthUnits="meter"
@@ -132,7 +137,7 @@ const App = () => {
           data={lines}
           getPosition={(d) => d.to}
           getText={(d) => d.tdist.toFixed(1)}
-          getColor={[255, 128, 0]}
+          getColor={hexToRgba(color)}
           getSize={16}
           getAlignmentBaseline={"top"}
           getTextAnchor={"middle"}
@@ -149,19 +154,32 @@ const App = () => {
       <div className=" bg-slate-100 bg-opacity-80 p-4 z-10 absolute top-0 right-0 rounded m-2">
         <h1 className="text-center text-xl">Ideoval</h1>
         <h1 className="text-center">Puntos</h1>
-        <div className="flex gap-2 my-4 justify-center items-center">
-          <label>Distancia: </label>
-          <input
-            type="number"
-            placeholder="10"
-            step={1}
-            min={1}
-            max={1000}
-            className=" border border-slate-500 rounded px-1 w-20 text-right"
-            onChange={handleDistanceInput}
-            value={len}
-          />
+
+        <div className="flex justify-between">
+          <div className="flex gap-2 my-4 justify-center items-center">
+            <label>Distancia: </label>
+            <input
+              type="number"
+              placeholder="10"
+              step={1}
+              min={1}
+              max={1000}
+              className=" border border-slate-500 rounded px-1 w-20 text-right"
+              onChange={handleDistanceInput}
+              value={len}
+            />
+          </div>
+          <div className="flex gap-2 my-4 justify-center items-center">
+            <label>Color: </label>
+            <input
+              type="color"
+              className=" border border-slate-500 rounded px-1 w-8 text-right"
+              onChange={handleColor}
+              value={color}
+            />
+          </div>
         </div>
+
         <div className="flex gap-2">
           <button
             onClick={handleRemovePoint}
