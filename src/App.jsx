@@ -18,7 +18,7 @@ const App = () => {
   const [lines, setLines] = useLocalStorage("lines", []);
   const [total, setTotal] = useState();
   const [style, setStyle] = useLocalStorage("style", 0);
-  const [len, setLen] = useLocalStorage("len", 100);
+  const [len, setLen] = useLocalStorage("len", 10);
 
   const [proj, setProj] = useLocalStorage(
     "proj",
