@@ -71,7 +71,11 @@ const App = () => {
   };
 
   const handleDistanceInput = (e) => {
-    setLen(e.target.value);
+    let dist = e.target.value;
+    if (dist < 1) dist = 1;
+    if (dist > 1000) dist = 1000;
+    if (isNaN(dist)) dist = dist;
+    setLen(dist);
   };
 
   useEffect(() => {
@@ -83,7 +87,6 @@ const App = () => {
   };
 
   const handleDownload = () => {
-    console.log("Click download");
     downloadCSV(gPoints);
   };
 
@@ -151,7 +154,7 @@ const App = () => {
             type="number"
             placeholder="10"
             step={1}
-            min={0}
+            min={1}
             max={1000}
             className=" border border-slate-500 rounded px-1 w-20 text-right"
             onChange={handleDistanceInput}
