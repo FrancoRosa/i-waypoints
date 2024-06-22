@@ -136,6 +136,7 @@ const App = () => {
           getSize={16}
           getAlignmentBaseline={"top"}
           getTextAnchor={"middle"}
+          getPixelOffset={[12, 12]}
         />
         <Map
           mapStyle={styles[style]}
