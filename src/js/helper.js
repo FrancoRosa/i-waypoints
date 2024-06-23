@@ -23,9 +23,7 @@ export const divideSegment = (a, b, L) => {
   for (let index = 0; index < divs; index++) {
     segmentPoints.push([x1 + index * xDiff, y1 + index * yDiff]);
   }
-  if (!segmentPoints.includes(b)) {
-    segmentPoints.push(b);
-  }
+
   return segmentPoints;
 };
 
