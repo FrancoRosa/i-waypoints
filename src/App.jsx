@@ -30,7 +30,7 @@ const App = () => {
   const styles = [
     "mapbox://styles/mapbox/streets-v12",
     "mapbox://styles/mapbox/satellite-v9",
-    "mapbox://styles/mapbox/satellite-streets-v12",
+    "mapbox://styles/km115franco/clan50h4r000g14qenbn65jsv",
     "mapbox://styles/mapbox/navigation-night-v1",
   ];
 
