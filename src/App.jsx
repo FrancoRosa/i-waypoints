@@ -3,7 +3,15 @@ import DeckGL from "@deck.gl/react";
 import { LineLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import { Map, NavigationControl } from "react-map-gl";
 import proj4 from "proj4";
-import { distance, divideSegment, downloadCSV, hexToRgba } from "./js/helper";
+import {
+  copyToClipboard,
+  distance,
+  divideSegment,
+  downloadCSV,
+  downloadWCSV,
+  getHeading,
+  hexToRgba,
+} from "./js/helper";
 import { useEffect, useState } from "react";
 import Button from "./Button";
 
@@ -17,12 +25,15 @@ const App = () => {
   const [points, setPoints] = useLocalStorage("points", []);
   const [gPoints, setGPoints] = useLocalStorage("gpoints", []);
   const [wPoints, setWPoints] = useLocalStorage("wPoints", []);
+  const [waypoint, setWaypoint] = useState([]);
+  const [list, setList] = useState(false);
   const [lines, setLines] = useLocalStorage("lines", []);
   const [intermediate, setIntermediate] = useLocalStorage("intermediate", []);
   const [total, setTotal] = useState();
   const [style, setStyle] = useLocalStorage("style", 0);
   const [len, setLen] = useLocalStorage("len", 10);
   const [color, setColor] = useLocalStorage("color", "#df870c");
+  const [copied, setCopied] = useState(false);
 
   const [proj, setProj] = useLocalStorage(
     "proj",
@@ -107,7 +118,7 @@ const App = () => {
   };
 
   const handleWDownload = () => {
-    downloadCSV(wPoints);
+    downloadWCSV(wPoints);
   };
 
   const handleColor = (e) => {
@@ -117,8 +128,23 @@ const App = () => {
   const addWaypoint = (e) => {
     const {
       coordinate: [lng, lat],
+      object,
     } = e;
-    setWPoints((p) => [...p, [lng, lat]]);
+    const index = gPoints.findIndex((p) => p === object);
+    const heading = getHeading([lng, lat], gPoints[index + 1]);
+    const name = "NuevoParadero";
+    const id = Date.now();
+    setWaypoint({ lng, lat, name, id, heading });
+    setCopied(false);
+    setWPoints((p) => [...p, { lng, lat, name, id, heading }]);
+  };
+
+  const handleCopy = () => {
+    const { lat, lng, heading } = waypoint;
+    const payload = `${lat.toFixed(6)}, ${lng.toFixed(6)}, ${heading.toFixed(
+      2
+    )}`;
+    copyToClipboard(payload).then(() => setCopied(true));
   };
 
   useEffect(() => {
@@ -145,48 +171,64 @@ const App = () => {
           id="route-points"
           data={points}
           getPosition={(d) => d}
-          getRadius={1}
+          getRadius={2}
           getFillColor={[255, 140, 0]}
           getLineColor={[255, 255, 255]}
           getLineWidth={0.5}
           stroked
-          autoHighlight
-          pickable
-          onClick={(e) => {
-            addWaypoint(e);
-            console.log("point click");
-          }}
         />
         <ScatterplotLayer
           id="granular-points"
           data={gPoints}
           getPosition={(d) => d}
-          getRadius={0.5}
+          getRadius={1}
           getFillColor={[255, 0, 0]}
           getLineColor={[255, 255, 255]}
-          getLineWidth={0.2}
+          getLineWidth={1}
           stroked
           autoHighlight
           pickable
           onClick={(e) => {
-            console.log("gpoint click");
             addWaypoint(e);
           }}
         />
         <ScatterplotLayer
           id="waypoints-points"
           data={wPoints}
-          getPosition={(d) => d}
-          getRadius={0.5}
-          getFillColor={[155, 0, 155]}
-          getLineColor={[0, 155, 0]}
-          getLineWidth={0.5}
+          getPosition={({ lng, lat }) => [lng, lat]}
+          getRadius={7.5}
+          getFillColor={[155, 0, 155, 100]}
+          getLineColor={[0, 155, 0, 50]}
+          getLineWidth={5}
           stroked
           autoHighlight
           pickable
           onClick={(e) => {
-            console.log("waypoint");
+            setWaypoint(e.object);
+            setCopied(false);
           }}
+        />
+        <TextLayer
+          id="heading-labels"
+          data={wPoints}
+          getPosition={({ lng, lat }) => [lng, lat]}
+          getText={(d) => `${d.heading.toFixed(0)}\u00b0`}
+          getColor={hexToRgba(color)}
+          getSize={16}
+          getAlignmentBaseline={"top"}
+          getTextAnchor={"middle"}
+          getPixelOffset={[15, 15]}
+          characterSet="auto"
+        />
+        <TextLayer
+          id="w-name-labels"
+          data={wPoints}
+          getPosition={({ lng, lat }) => [lng, lat]}
+          getText={(d) => d.name}
+          getColor={hexToRgba(color)}
+          getSize={24}
+          getAlignmentBaseline="bottom"
+          getTextAnchor="end"
         />
         <TextLayer
           id="distance-labels"
@@ -215,7 +257,7 @@ const App = () => {
           </Button>
         </div>
         <div className="flex gap-2 justify-between my-2 items-center">
-          <h1 className="text-center">Puntos: {points.length}</h1>
+          <h1 className="text-center font-bold">Puntos: {points.length}</h1>
           <Button onClick={handleRemovePoint}>Borrar</Button>
           <Button onClick={handleRemoveAll}>Borrar todos</Button>
         </div>
@@ -255,13 +297,56 @@ const App = () => {
         </div>
         <hr className="w-full border border-slate-500 my-2" />
         <div className="flex gap-2 justify-between my-2 items-center">
-          <h1 className="text-center">Paraderos: {wPoints.length}</h1>
+          <h1 className="text-center font-bold">Paraderos: {wPoints.length}</h1>
+          <Button onClick={() => setList((s) => !s)}>Ver</Button>
           <Button onClick={handleRemoveWPoint}>Borrar</Button>
           <Button onClick={handleRemoveWAll}>Borrar todos</Button>
         </div>
+        {list && (
+          <pre className="h-24 overflow-y-scroll ">
+            {wPoints.map((w, index) => (
+              <p className="text-sm text-right" key={index}>
+                {`${w.name},${w.lat.toFixed(6)},${w.lng.toFixed(6)},${w.heading
+                  .toFixed(3)
+                  .padStart(7, " ")}`}
+              </p>
+            ))}
+          </pre>
+        )}
         <div className="flex gap-2 justify-end mt-4">
           <Button onClick={handleWDownload}>Descargar Paraderos</Button>
         </div>
+        <hr className="w-full border border-slate-500 my-2" />
+
+        {waypoint.id && (
+          <div>
+            <div className="flex gap-2 my-2">
+              <p>Paradero:</p>{" "}
+              <input
+                type="text"
+                className="w-40 border border-slate-500 rounded px-1"
+                value={waypoint.name}
+                onChange={(e) => {
+                  setWaypoint({ ...waypoint, name: e.target.value });
+                  setWPoints((p) =>
+                    p.map((w) =>
+                      w.id === waypoint.id ? { ...w, name: e.target.value } : w
+                    )
+                  );
+                }}
+              />
+            </div>
+            <div className="flex gap-2 justify-between items-center">
+              <p>
+                {waypoint.lat.toFixed(6)}, {waypoint.lng.toFixed(6)},{" "}
+                {waypoint.heading.toFixed(2)}
+              </p>
+              <Button onClick={handleCopy}>
+                {copied ? "Copiado" : "Copiar"}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

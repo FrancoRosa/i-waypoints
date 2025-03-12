@@ -6,6 +6,22 @@ export const distance = (a, b) => {
   return Math.sqrt(yDiff * yDiff + xDiff * xDiff);
 };
 
+export const getHeading = (coord1, coord2) => {
+  const [lng1, lat1] = coord1.map((deg) => (deg * Math.PI) / 180);
+  const [lng2, lat2] = coord2.map((deg) => (deg * Math.PI) / 180);
+
+  const deltaLng = lng2 - lng1;
+
+  const y = Math.sin(deltaLng) * Math.cos(lat2);
+  const x =
+    Math.cos(lat1) * Math.sin(lat2) -
+    Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng);
+
+  let angle = Math.atan2(y, x) * (180 / Math.PI);
+
+  return (angle + 360) % 360; // Normalize to [0, 360]
+};
+
 const dRound = (num, decimalPlaces = 6) => {
   const factor = Math.pow(10, decimalPlaces);
   return Math.round(num * factor) / factor;
@@ -37,6 +53,24 @@ const arrayToCSV = (data) => {
   return rows.join("\n");
 };
 
+const objToCSV = (data) => {
+  const rows = [];
+  const headers = ["nro", "nombre", "latitud", "longitud", "angulo"];
+  rows.push(headers.join(";"));
+  data.forEach((d, i) => {
+    rows.push(
+      [
+        i + 1,
+        d.name,
+        d.lat.toFixed(6),
+        d.lng.toFixed(6),
+        d.heading.toFixed(2),
+      ].join(";")
+    );
+  });
+  return rows.join("\n");
+};
+
 export const downloadCSV = (data) => {
   const date = new Date()
     .toLocaleString("sv")
@@ -45,6 +79,31 @@ export const downloadCSV = (data) => {
     .replace(/ /g, "");
   const filename = `wp_${date}.csv`;
   const csvString = arrayToCSV(data);
+  if (!csvString) {
+    return;
+  }
+
+  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+
+  link.setAttribute("href", url);
+  link.setAttribute("download", filename);
+  link.style.visibility = "hidden";
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+export const downloadWCSV = (data) => {
+  const date = new Date()
+    .toLocaleString("sv")
+    .replace(/-/g, "")
+    .replace(/:/g, "")
+    .replace(/ /g, "");
+  const filename = `wp_${date}.csv`;
+  const csvString = objToCSV(data);
   if (!csvString) {
     return;
   }
@@ -93,4 +152,8 @@ export const hexToRgba = (hex) => {
   }
 
   return [r, g, b, a];
+};
+
+export const copyToClipboard = async (text) => {
+  return await navigator.clipboard.writeText(text);
 };
