@@ -303,9 +303,9 @@ const App = () => {
           <Button onClick={handleRemoveWAll}>Borrar todos</Button>
         </div>
         {list && (
-          <pre className="h-24 overflow-y-scroll ">
+          <pre className="h-24 overflow-y-scroll text-xs text-right">
             {wPoints.map((w, index) => (
-              <p className="text-sm text-right" key={index}>
+              <p key={index}>
                 {`${w.name},${w.lat.toFixed(6)},${w.lng.toFixed(6)},${w.heading
                   .toFixed(3)
                   .padStart(7, " ")}`}
