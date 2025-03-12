@@ -5,6 +5,7 @@ import { Map, NavigationControl } from "react-map-gl";
 import proj4 from "proj4";
 import { distance, divideSegment, downloadCSV, hexToRgba } from "./js/helper";
 import { useEffect, useState } from "react";
+import Button from "./Button";
 
 const initialView = {
   longitude: -71.978,
@@ -15,6 +16,7 @@ const initialView = {
 const App = () => {
   const [points, setPoints] = useLocalStorage("points", []);
   const [gPoints, setGPoints] = useLocalStorage("gpoints", []);
+  const [wPoints, setWPoints] = useLocalStorage("wPoints", []);
   const [lines, setLines] = useLocalStorage("lines", []);
   const [intermediate, setIntermediate] = useLocalStorage("intermediate", []);
   const [total, setTotal] = useState();
@@ -48,26 +50,43 @@ const App = () => {
     setIntermediate([]);
   };
 
+  const handleRemoveWPoint = () => {
+    setWPoints((p) => p.slice(0, -1));
+  };
+  const handleRemoveWAll = () => {
+    setWPoints([]);
+  };
+
   const handleClick = (e) => {
-    const [longitude, latitude] = e.coordinate;
-    const to = [longitude, latitude];
-    setPoints((p) => [...p, to]);
-    if (points.length > 0) {
-      const from = points.at(-1);
-      const from_utm = proj4(proj).forward(from);
-      const to_utm = proj4(proj).forward(to);
-      const dist = distance(from_utm, to_utm);
-      const intp_utm = divideSegment(from_utm, to_utm, len);
-      const intp = [];
-      intp_utm.forEach((c) => {
-        intp.push(proj4(proj).inverse(c));
-      });
-      setIntermediate((p) => [...p, intp.length - 1]);
-      setGPoints((p) => [...p, ...intp]);
-      setLines((l) => [
-        ...l,
-        { from, to, dist, tdist: l.length > 0 ? l.at(-1).tdist + dist : dist },
-      ]);
+    const {
+      picked,
+      coordinate: [longitude, latitude],
+    } = e;
+    if (!picked) {
+      const to = [longitude, latitude];
+      setPoints((p) => [...p, to]);
+      if (points.length > 0) {
+        const from = points.at(-1);
+        const from_utm = proj4(proj).forward(from);
+        const to_utm = proj4(proj).forward(to);
+        const dist = distance(from_utm, to_utm);
+        const intp_utm = divideSegment(from_utm, to_utm, len);
+        const intp = [];
+        intp_utm.forEach((c) => {
+          intp.push(proj4(proj).inverse(c));
+        });
+        setIntermediate((p) => [...p, intp.length - 1]);
+        setGPoints((p) => [...p, ...intp]);
+        setLines((l) => [
+          ...l,
+          {
+            from,
+            to,
+            dist,
+            tdist: l.length > 0 ? l.at(-1).tdist + dist : dist,
+          },
+        ]);
+      }
     }
   };
 
@@ -87,14 +106,24 @@ const App = () => {
     downloadCSV(gPoints);
   };
 
+  const handleWDownload = () => {
+    downloadCSV(wPoints);
+  };
+
   const handleColor = (e) => {
     setColor(e.target.value);
+  };
+
+  const addWaypoint = (e) => {
+    const {
+      coordinate: [lng, lat],
+    } = e;
+    setWPoints((p) => [...p, [lng, lat]]);
   };
 
   useEffect(() => {
     setTotal(lines.reduce((s, l) => s + l.dist, 0).toFixed(2));
   }, [lines]);
-
   return (
     <>
       <DeckGL
@@ -121,6 +150,12 @@ const App = () => {
           getLineColor={[255, 255, 255]}
           getLineWidth={0.5}
           stroked
+          autoHighlight
+          pickable
+          onClick={(e) => {
+            addWaypoint(e);
+            console.log("point click");
+          }}
         />
         <ScatterplotLayer
           id="granular-points"
@@ -131,6 +166,27 @@ const App = () => {
           getLineColor={[255, 255, 255]}
           getLineWidth={0.2}
           stroked
+          autoHighlight
+          pickable
+          onClick={(e) => {
+            console.log("gpoint click");
+            addWaypoint(e);
+          }}
+        />
+        <ScatterplotLayer
+          id="waypoints-points"
+          data={wPoints}
+          getPosition={(d) => d}
+          getRadius={0.5}
+          getFillColor={[155, 0, 155]}
+          getLineColor={[0, 155, 0]}
+          getLineWidth={0.5}
+          stroked
+          autoHighlight
+          pickable
+          onClick={(e) => {
+            console.log("waypoint");
+          }}
         />
         <TextLayer
           id="distance-labels"
@@ -152,8 +208,17 @@ const App = () => {
       </DeckGL>
 
       <div className=" bg-slate-100 bg-opacity-80 p-4 z-10 absolute top-0 right-0 rounded m-2">
-        <h1 className="text-center text-xl">Ideoval</h1>
-        <h1 className="text-center">Puntos</h1>
+        <div className="flex justify-between">
+          <h1 className="text-center text-xl">Ideoval</h1>
+          <Button onClick={handleStyle}>
+            Mapa {style + 1}/{styles.length}
+          </Button>
+        </div>
+        <div className="flex gap-2 justify-between my-2 items-center">
+          <h1 className="text-center">Puntos: {points.length}</h1>
+          <Button onClick={handleRemovePoint}>Borrar</Button>
+          <Button onClick={handleRemoveAll}>Borrar todos</Button>
+        </div>
 
         <div className="flex justify-between">
           <div className="flex gap-2 my-4 justify-center items-center">
@@ -164,7 +229,7 @@ const App = () => {
               step={1}
               min={1}
               max={1000}
-              className=" border border-slate-500 rounded px-1 w-20 text-right"
+              className="text-sm border border-slate-500 rounded px-1 w-12 text-right mx-2"
               onChange={handleDistanceInput}
               value={len}
             />
@@ -173,46 +238,29 @@ const App = () => {
             <label>Color: </label>
             <input
               type="color"
-              className=" border border-slate-500 rounded px-1 w-8 text-right"
+              className=" border border-slate-500 rounded  w-6 text-right"
               onChange={handleColor}
               value={color}
             />
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={handleRemovePoint}
-            className=" border border-slate-500 rounded px-3 py-1"
-          >
-            Borrar
-          </button>
-          <button
-            onClick={handleRemoveAll}
-            className=" border border-slate-500 rounded px-3 py-1 "
-          >
-            Borrar todos
-          </button>
-          <button
-            onClick={handleStyle}
-            className="border border-slate-500 rounded px-3 py-1"
-          >
-            Mapa {style + 1}/{styles.length}
-          </button>
-        </div>
         <div className="flex text-sm flex-col text-right">
-          <p>Lineas: {lines.length}</p>
-          <p>Puntos: {points.length}</p>
           <p>Puntos Granulados: {gPoints.length}</p>
+          <p>Lineas: {lines.length}</p>
           <p>Distancia: {total}</p>
         </div>
         <div className="flex gap-2 justify-end mt-4">
-          <button
-            onClick={handleDownload}
-            className="border border-slate-500 rounded px-3 py-1"
-          >
-            Descargar CSV
-          </button>
+          <Button onClick={handleDownload}>Descargar Puntos</Button>
+        </div>
+        <hr className="w-full border border-slate-500 my-2" />
+        <div className="flex gap-2 justify-between my-2 items-center">
+          <h1 className="text-center">Paraderos: {wPoints.length}</h1>
+          <Button onClick={handleRemoveWPoint}>Borrar</Button>
+          <Button onClick={handleRemoveWAll}>Borrar todos</Button>
+        </div>
+        <div className="flex gap-2 justify-end mt-4">
+          <Button onClick={handleWDownload}>Descargar Paraderos</Button>
         </div>
       </div>
     </>
